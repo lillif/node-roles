@@ -78,38 +78,34 @@ for i, e in zip(n['id'], n['essentiality']):
 
 role_ess = {}
 for role in unique_roles:
+    # role = role.replace('_', ' ').replace('r', 'R')
     role_ess[role] = [0,0,0,0]
 
-for r, e in essentialities.items():
+for role, e in essentialities.items():
     if e == 1.0:
-        role_ess[node_roles[r]][3] += 1
+        role_ess[node_roles[role]][3] += 1
     elif e > 0.5:
-        role_ess[node_roles[r]][2] += 1
+        role_ess[node_roles[role]][2] += 1
     elif e > 0.1:
-        role_ess[node_roles[r]][1] += 1
+        role_ess[node_roles[role]][1] += 1
     else:
-        role_ess[node_roles[r]][0] += 1
+        role_ess[node_roles[role]][0] += 1
     
-role0 = role_ess['role_0']
-role1 = role_ess['role_1']
-role2 = role_ess['role_2']
-role3 = role_ess['role_3']
 
-ind = np.arange(4)
-    
-bottom = [r0 + r1 for r0, r1 in zip(role0, role1)]
-bottom1 = [b + r2 for b, r2 in zip(bottom, role2)]
-
+r = len(unique_roles) # number of roles 
+ind = np.arange(r)
 width = 0.35
-
-p1 = plt.bar(ind, role0, width, color = 'green')
-p2 = plt.bar(ind, role1, width, bottom=role0,  color = 'yellow')
-p3 = plt.bar(ind, role2, width, bottom=bottom,  color = 'orange')
-p4 = plt.bar(ind, role3, width, bottom=bottom1,  color = 'red')
+ind = 0
+for role, d in role_ess.items():
+    p1 = plt.bar(ind, d[0], width, color = 'green')
+    p2 = plt.bar(ind, d[1], width, bottom=d[0],  color = 'yellow')
+    p3 = plt.bar(ind, d[2], width, bottom=d[0]+d[1],  color = 'orange')
+    p4 = plt.bar(ind, d[3], width, bottom=d[0]+d[1]+d[2],  color = 'red')
+    ind += 1
     
 plt.ylabel('Number of Reactions')
 plt.title('Reactions by node role and essentiality (weighted graph)')
-plt.xticks(ind, ('role 0', 'role 1', 'role 2', 'role 3'))
+plt.xticks(np.arange(r), role_ess.keys())
 plt.legend((p1[0], p2[0], p3[0], p4[0]), ('no damage', 'mild change', 'severe change', 'lethal'))
 
 plt.show()
