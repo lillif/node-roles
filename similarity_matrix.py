@@ -4,6 +4,9 @@ import pickle
 import pandas as pd
 from numpy.linalg import norm
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import community as community_louvain
 from sklearn.cluster import SpectralClustering
 
 def directed_diameter(e, GG):    
@@ -23,7 +26,6 @@ def sim_rb(A, k=5, alpha=0.5):
     ones = np.ones([N,1])
     
     lambda1 = max(np.linalg.eig(A)[0]).real # largest eigenvalue of A
-    alpha = 1 # for now: equal weight for local and global environment
     beta = alpha / lambda1
     sA = beta * A
     
@@ -48,23 +50,40 @@ def edges_to_denseMFG(filename):
     filename = 'BT-549edges.csv'
     # weighted:
     e = pd.read_csv(filename)
-    GG = nx.DiGraph()
+    G = nx.DiGraph()
     
     for row in e.iterrows():
         s, t, w = row[1]
-        GG.add_edge(s,t, weight=w)
+        G.add_edge(s,t, weight=w)
     
     # k = directed_diameter(e, GG) # already computed: kmax = 11
     k = 11 # diameter of largest strongly connected component of MFG
     
-    A = nx.linalg.graphmatrix.adjacency_matrix(GG).toarray()
+    A = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     return A, k
 
-# A, k = edges_to_denseMFG('BT-549edges.csv')
-A = pickle.load( open( "denseMFG.p", "rb" ) )
-k = 11
-X, Y = sim_rb(A, k)
 
 
-clustering = SpectralClustering(n_clusters=4, assign_labels="discretize").fit(Y)
-clusters = clustering.labels_
+A, k = edges_to_denseMFG('BT-549edges.csv')
+# A = pickle.load( open( "denseMFG.p", "rb" ) )
+# k = 11
+X, Y = sim_rb(A, k, alpha=0.8)
+
+# clustering = SpectralClustering(n_clusters=4, assign_labels="discretize").fit(Y)
+# clusters = clustering.labels_
+
+GY = nx.convert_matrix.from_numpy_array(Y)
+partition = community_louvain.best_partition(GY)
+
+
+plt.figure(figsize=[13, 10])
+# draw the graph
+pos = nx.spring_layout(GY)
+# pos=nx.kamada_kawai_layout(GY)
+# color the nodes according to their partition
+cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
+nx.draw_networkx_nodes(GY, pos, partition.keys(), node_size=40,
+                       cmap=cmap, node_color=list(partition.values()))
+nx.draw_networkx_edges(GY, pos, alpha=0.5, width=0.02)
+plt.show()
+
