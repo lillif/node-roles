@@ -48,45 +48,52 @@ def sim_rb(A, k=5, alpha=0.5):
 
 
 # load MFG
-
 def edges_to_denseMFG(filename):
-    filename = 'BT-549edges.csv'
+
     # weighted:
     e = pd.read_csv(filename)
     G = nx.DiGraph()
     
     for row in e.iterrows():
-        s, t, w = row[1]
+        _, s, t, w = row[1]
         G.add_edge(s,t, weight=w)
     
-    # k = directed_diameter(e, GG) # already computed: kmax = 11
-    k = 11 # diameter of largest strongly connected component of MFG
+    k = directed_diameter(e, G) # diameter of largest strongly connected component of MFG
     
     A = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     return A, k
 
 
+def draw_graph(Y):
+    GY = nx.convert_matrix.from_numpy_array(Y)
+    partition = community_louvain.best_partition(GY)
+    
+    
+    plt.figure(figsize=[13, 10])
+    # draw the graph
+    # pos = nx.spring_layout(GY)
+    pos=nx.kamada_kawai_layout(GY)
+    # color the nodes according to their partition
+    cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
+    nx.draw_networkx_nodes(GY, pos, partition.keys(), node_size=40,
+                           cmap=cmap, node_color=list(partition.values()))
+    nx.draw_networkx_edges(GY, pos, alpha=0.5, width=0.02)
+    plt.show()
 
-A, k = edges_to_denseMFG('BT-549edges.csv')
-# A = pickle.load( open( "denseMFG.p", "rb" ) )
-# k = 11
-X, Y = sim_rb(A, k, alpha=0.8)
 
-# clustering = SpectralClustering(n_clusters=4, assign_labels="discretize").fit(Y)
-# clusters = clustering.labels_
+models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
 
-GY = nx.convert_matrix.from_numpy_array(Y)
-partition = community_louvain.best_partition(GY)
-
-
-plt.figure(figsize=[13, 10])
-# draw the graph
-pos = nx.spring_layout(GY)
-# pos=nx.kamada_kawai_layout(GY)
-# color the nodes according to their partition
-cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
-nx.draw_networkx_nodes(GY, pos, partition.keys(), node_size=40,
-                       cmap=cmap, node_color=list(partition.values()))
-nx.draw_networkx_edges(GY, pos, alpha=0.5, width=0.02)
-plt.show()
-
+for model in models:
+    
+    A, k = edges_to_denseMFG(f'../data/{model}_edges.csv')
+    # A = pickle.load( open( "denseMFG.p", "rb" ) )
+    # k = 11
+    X, Y = sim_rb(A, k, alpha=0.8)
+    
+    np.save(f'../data/role-based-sim-features/{model}-X.npy', X)
+    np.save(f'../data/role-based-sim-features/{model}-Y.npy', Y)
+    
+    # clustering = SpectralClustering(n_clusters=4, assign_labels="discretize").fit(Y)
+    # clusters = clustering.labels_
+    
+    # draw_graph(Y)

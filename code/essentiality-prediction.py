@@ -14,6 +14,21 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 # importing sys for exiting when necessary
 import sys
 
+# prediction from rolx
+def rolx_training_data():
+    X = np.load('../data/rolx-train-val-test/Xtrain.npy')
+    y = np.load('../data/rolx-train-val-test/ytrain.npy')
+    yc = np.load('../data/rolx-train-val-test/yctrain.npy')
+    return X, y, yc
+
+# prediction from flow profiles
+def flow_profiles_training_data():
+    X = pickle.load( open( "data/BT-549/role-based-sim/X.p", "rb" ) )
+    Y = pickle.load( open( "data/BT-549/role-based-sim/Y.p", "rb" ) )
+    y = np.load('data/BT-549/y_num_RolX.npy')
+    yc = np.load('data/BT-549/y_classes_RolX.npy')
+    return X, Y, y, yc
+
 
 def oversample(X, y):
     X0 = X[y==0]
@@ -36,13 +51,13 @@ def oversample(X, y):
     y = np.hstack((y0,y1,y2,y3))
     return X, y
 
-def undersample(X, y, ncps = 2):
+def undersample(X, y):
     X0 = X[y==0]
     X1 = X[y==1]
     X2 = X[y==2]
     X3 = X[y==3]
 
-    n = ncps * len(X2)
+    n = len(X2)
 
     x0s = np.random.RandomState(seed=134).randint(0,len(X0),size=n)
     x1s = np.random.RandomState(seed=723).randint(0,len(X1),size=n)
@@ -50,7 +65,6 @@ def undersample(X, y, ncps = 2):
 
     X0 = X0[x0s]
     X1 = X1[x1s]
-    X2 = np.repeat(X2, 2, axis=0)
     X3 = X3[x3s]
 
     y0 = np.repeat(0,len(X0))
@@ -64,7 +78,7 @@ def undersample(X, y, ncps = 2):
     return X, y
 
 
-def training(X, y, clf, K = 5, m = False):
+def training(X, y, clf, K = 5, m = False, oversmpl = False):
 
     p = np.random.RandomState(seed=847).permutation(len(y))
     Xsh = X[p]
@@ -83,6 +97,9 @@ def training(X, y, clf, K = 5, m = False):
         
         Xt = np.concatenate((Xsh[:splits[k]], Xsh[splits[k+1]:]))
         yt = np.concatenate((ysh[:splits[k]], ysh[splits[k+1]:]))
+        
+        if oversmpl:
+            Xt, yt = oversample(Xt, yt)
         
         Xv = Xsh[splits[k]:splits[k+1]]
         yv = ysh[splits[k]:splits[k+1]]
@@ -126,37 +143,26 @@ def training(X, y, clf, K = 5, m = False):
     
     return avgerr, avgacc
 
-# prediction from rolx
-def rolx_training_data():
-    X = np.load('data/train-test-set-rolX/Xtrain.npy')
-    y = np.load('data/train-test-set-rolX/ytrain.npy')
-    yc = np.load('data/train-test-set-rolX/yctrain.npy')
-    return X, y, yc
 
-# prediction from flow profiles
-def flow_profiles_training_data():
-    X = pickle.load( open( "data/BT-549/role-based-sim/X.p", "rb" ) )
-    Y = pickle.load( open( "data/BT-549/role-based-sim/Y.p", "rb" ) )
-    y = np.load('data/BT-549/y_num_RolX.npy')
-    yc = np.load('data/BT-549/y_classes_RolX.npy')
-    return X, Y, y, yc
 
 # classifiers
 classifiers = [svm.SVC(), RandomForestClassifier(), MLPClassifier()]
 
 # # rolX predictions
-# Xr, yr, ycr = rolx_training_data()
-# Xo, yco = oversample(Xr, ycr)
-# Xu, ycu = undersample(Xr, ycr)
+Xr, yr, ycr = rolx_training_data()
+
+for clf in classifiers:
+    training(Xr, ycr, clf, m = True, oversmpl = True)
+
 # training(Xo, yco, svm.SVC(decision_function_shape='ovo'))
 # training(Xo, yco, svm.SVC())
 
 
 # flow profiles redictions
-Xf, Yf, yf, ycf = flow_profiles_training_data()
+# Xf, Yf, yf, ycf = flow_profiles_training_data()
 
-Xo, yco = oversample(Xf, ycf)
-Xu, ycu = undersample(Xf, ycf, ncps = 3)
+# Xo, yco = oversample(Xf, ycf)
+# Xu, ycu = undersample(Xf, ycf, ncps = 3)
 
 
 
