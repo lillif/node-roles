@@ -1,22 +1,20 @@
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
 
-
-# models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
+models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
 
 # for model in models:
-#     folder = 'data/' + model + '/'
-#     fnames = folder + model
+#     folder = '../data/rolx-features/'
+#     # fnames = folder + model
     
-#     X = np.load(fnames + '-X.npy')
+#     X = np.load(f'{folder}{model}-X.npy')
     
-#     n = pd.read_csv(fnames + '_nodes.csv')
+#     n = pd.read_csv(f'../data/{model}_nodes.csv')
 #     y = np.array(list(n['essentiality'])) 
 #     y[y<1e-14] = 0
     
-#     np.save(fnames + '-y-num.npy', y)
+#     np.save(f'{folder}{model}-y-num.npy', y)
     
 #     y_classes = y.copy()
 #     y_classes[y_classes==1] = -4
@@ -25,7 +23,7 @@ from sklearn.model_selection import train_test_split
 #     y_classes[y_classes>-0.1] = -1
 #     y_classes = - y_classes - 1
     
-#     np.save(fnames + '-y-classes.npy', y_classes)
+#     np.save(f'{folder}{model}-y-classes.npy', y_classes)
 
 models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
 ys = {}
@@ -34,10 +32,10 @@ ycs = {}
 allycs = np.array([])
 allys = np.array([])
 for model in models:
-    fpath = 'data/training-data-from-rolX/'
-    ys[model] = np.load(fpath + model + '-y-num.npy')
-    Xs[model] = np.load(fpath + '6roles/' + model + '-6roles-X.npy')
-    ycs[model] = np.load(fpath + model + '-y-classes.npy')
+    fpath = '../data/rolx-features/'
+    ys[model] = np.load(f'{fpath}{model}-y-num.npy')
+    Xs[model] = np.load(f'{fpath}{model}-X.npy')
+    ycs[model] = np.load(f'{fpath}{model}-y-classes.npy')
     allycs = np.append(allycs, ycs[model])
     allys = np.append(allys, ys[model])
 
@@ -77,14 +75,12 @@ ytest = allys[tte]
 # need the manual version so we get ycs and ys alongside each other
 # X_train, X_test, y_train, y_test = train_test_split(allXs, allycs, random_state=1412, stratify=allycs)
 
-
-
-fpath = 'data/train-test-set-rolX/'
-np.save(fpath + 'Xtrain.npy', Xtrain)
-np.save(fpath + 'ytrain.npy', ytrain)
-np.save(fpath + 'yctrain.npy', yctrain)
-np.save(fpath + 'Xtest.npy', Xtest)
-np.save(fpath + 'ytest.npy', ytest)
-np.save(fpath + 'yctest.npy', yctest)
+fpath = '../data/rolx-train-val-test/'
+np.save(f'{fpath}Xtrain.npy', Xtrain)
+np.save(f'{fpath}ytrain.npy', ytrain)
+np.save(f'{fpath}yctrain.npy', yctrain)
+np.save(f'{fpath}Xtest.npy', Xtest)
+np.save(f'{fpath}ytest.npy', ytest)
+np.save(f'{fpath}yctest.npy', yctest)
 
 

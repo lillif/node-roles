@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import community as community_louvain
 from sklearn.cluster import SpectralClustering
 
+### following "Role-based similarity in directed networks" by Kathryn Cooper and Mauricio Barahona
+
+
 def directed_diameter(e, GG):    
     # largest strongly connected component:
     lscc = max(nx.strongly_connected_components(GG), key=len)
