@@ -5,7 +5,7 @@ import pandas as pd
 models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
 
 # for model in models:
-#     folder = '../data/rolx-features/'
+#     folder = '../data/rolx-memberships/'
 #     # fnames = folder + model
     
 #     X = np.load(f'{folder}{model}-X.npy')
@@ -32,7 +32,7 @@ ycs = {}
 allycs = np.array([])
 allys = np.array([])
 for model in models:
-    fpath = '../data/rolx-features/'
+    fpath = '../data/rolx-memberships/'
     ys[model] = np.load(f'{fpath}{model}-y-num.npy')
     Xs[model] = np.load(f'{fpath}{model}-X.npy')
     ycs[model] = np.load(f'{fpath}{model}-y-classes.npy')

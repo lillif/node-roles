@@ -22,11 +22,12 @@ def rolx_training_data():
     return X, y, yc
 
 # prediction from flow profiles
-def flow_profiles_training_data():
-    X = pickle.load( open( "data/BT-549/role-based-sim/X.p", "rb" ) )
-    Y = pickle.load( open( "data/BT-549/role-based-sim/Y.p", "rb" ) )
-    y = np.load('data/BT-549/y_num_RolX.npy')
-    yc = np.load('data/BT-549/y_classes_RolX.npy')
+def flow_profiles_training_data(model):
+    X = np.load(f'../data/role-based-sim-features/{model}-X.npy')
+    Y = np.load(f'../data/role-based-sim-features/{model}-Y.npy')
+    y = np.load(f'../data/rolx-memberships/{model}-y-num.npy')
+    yc = np.load(f'../data/rolx-memberships/{model}-y-classes.npy')
+    print(f'{model} has X shape {X.shape}')
     return X, Y, y, yc
 
 
@@ -151,19 +152,19 @@ classifiers = [svm.SVC(), RandomForestClassifier(), MLPClassifier()]
 # # rolX predictions
 Xr, yr, ycr = rolx_training_data()
 
-for clf in classifiers:
-    training(Xr, ycr, clf, m = True, oversmpl = True)
+# for clf in classifiers:
+#     training(Xr, ycr, clf, m = True, oversmpl = True)
 
-# training(Xo, yco, svm.SVC(decision_function_shape='ovo'))
-# training(Xo, yco, svm.SVC())
+# # training(Xo, yco, svm.SVC(decision_function_shape='ovo'))
+# # training(Xo, yco, svm.SVC())
 
 
-# flow profiles redictions
+# models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
+
+# # flow profiles redictions
 # Xf, Yf, yf, ycf = flow_profiles_training_data()
 
 # Xo, yco = oversample(Xf, ycf)
 # Xu, ycu = undersample(Xf, ycf, ncps = 3)
-
-
 
 

@@ -21,9 +21,8 @@ import sys
 
 def runRolX(model):
 
-    e = pd.read_csv(f'../data/{model}_edges.csv')
+    e = pd.read_csv(f'../data/mfgs/{model}_edges.csv')
     G = nx.DiGraph()
-
 
     for row in e.iterrows():
         _, s, t, w = row[1]
@@ -32,10 +31,14 @@ def runRolX(model):
     # extract features
     feature_extractor = RecursiveFeatureExtractor(G)
     features = feature_extractor.extract_features()
-
-
+    
     print(f'\nFeatures extracted from {feature_extractor.generation_count} recursive generations:')
     print(features)
+    
+    X_features = features.to_numpy()
+    np.save(f'../data/rolx-features/{model}-rolx-features-X.npy', X_features)
+    
+    return
 
     # assign node roles
     role_extractor = RoleExtractor(n_roles=8)
@@ -49,7 +52,7 @@ def runRolX(model):
     print(role_extractor.role_percentage.round(2))
 
     X = role_extractor.role_percentage.round(2).to_numpy()
-    np.save(f'../data/rolx-features/{model}-8roles-X.npy', X)
+    np.save(f'../data/rolx-memberships/{model}-8roles-X.npy', X)
     
     return
 
@@ -61,7 +64,8 @@ def runRolX(model):
     # build list of colors for all nodes in G
     node_colors = [role_colors[node_roles[node]] for node in G.nodes]
 
-
+    
+    # plot graph
     # pos=nx.kamada_kawai_layout(G)
     # # plot graph
     # plt.figure(figsize=[13, 10])
@@ -71,10 +75,10 @@ def runRolX(model):
 
     # export as csv for gephi
 
-    n = pd.read_csv(f'../data/{model}_nodes.csv')
+    n = pd.read_csv(f'../data/mfgs/{model}_nodes.csv')
     nr_df = list(node_roles.values())
     n['Role'] = nr_df
-    n.to_csv(f'../data/{model}_rolxnodes.csv', index=False)
+    n.to_csv(f'../data/mfgs/{model}_rolxnodes.csv', index=False)
 
 
     # plotting roles & essentiality
