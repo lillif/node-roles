@@ -36,9 +36,10 @@ def runRolX(model):
     print(features)
     
     X_features = features.to_numpy()
-    np.save(f'../data/rolx-features/{model}-rolx-features-X.npy', X_features)
+    np.save(f'../data/rolx-features/{model}-raw-rolx-features-X.npy', X_features)
+    features.to_csv(f'../data/rolx-features/{model}_features-df.csv', index=False)
     
-    return
+    return 
 
     # assign node roles
     role_extractor = RoleExtractor(n_roles=8)
@@ -126,10 +127,13 @@ def runRolX(model):
 
 models = ['BT-549', 'HCT-116', 'K-562', 'MCF7', 'OVCAR-5']
 
+dfs = {}
 
 
 for model in models:
-    runRolX(model)
+    
+    dfs[model] = runRolX(model)
+    
 
 # enables running from command line    
 # if __name__ == "__main__":
