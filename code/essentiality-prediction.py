@@ -16,17 +16,20 @@ import sys
 
 # prediction from rolx
 def rolx_training_data():
-    X = np.load('../data/rolx-train-val-test/Xtrain.npy')
-    y = np.load('../data/rolx-train-val-test/ytrain.npy')
-    yc = np.load('../data/rolx-train-val-test/yctrain.npy')
+    fpath = '../data/rolx-train-val-test/'
+    X = np.load(f'{fpath}Xtrain.npy')
+    y = np.load(f'{fpath}ytrain.npy')
+    yc = np.load(f'{fpath}yctrain.npy')
     return X, y, yc
 
 # prediction from flow profiles
 def flow_profiles_training_data(model):
-    X = np.load(f'../data/role-based-sim-features/{model}-X.npy')
-    Y = np.load(f'../data/role-based-sim-features/{model}-Y.npy')
-    y = np.load(f'../data/rolx-memberships/{model}-y-num.npy')
-    yc = np.load(f'../data/rolx-memberships/{model}-y-classes.npy')
+    simpath = '../data/role-based-sim-features/'
+    rolxpath = '../data/rolx-memberships/'
+    X = np.load(f'{simpath}{model}-X.npy')
+    Y = np.load(f'{simpath}{model}-Y.npy')
+    y = np.load(f'{rolxpath}{model}-y-num.npy')
+    yc = np.load(f'{rolxpath}{model}-y-classes.npy')
     print(f'{model} has X shape {X.shape}')
     return X, Y, y, yc
 
@@ -78,8 +81,32 @@ def undersample(X, y):
 
     return X, y
 
+def plotconfmatrix(yv, yp, clf):
+    # plot confusion matrix
+    # Get and reshape confusion matrix data
+    matrix = confusion_matrix(yv, yp)
+    matrix = matrix.astype('float') / matrix.sum(axis=1)[:, np.newaxis]
+    
+    # Build the plot
+    plt.figure(figsize=(16,7))
+    sns.set(font_scale=1.4)
+    sns.heatmap(matrix, annot=True, annot_kws={'size':10},
+                cmap=plt.cm.Greens, linewidths=0.2)
+    
+    # Add labels to the plot
+    class_names = ['No Change', 'Mild Change', 'Severe Change', 'Lethal']
+    tick_marks = np.arange(len(class_names))
+    tick_marks2 = tick_marks + 0.5
+    plt.xticks(tick_marks, class_names, rotation=25)
+    plt.yticks(tick_marks2, class_names, rotation=0)
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.title('Confusion Matrix for ' + str(clf).replace('()',''))
+    plt.show()
 
-def training(X, y, clf, K = 5, m = False, oversmpl = False):
+
+
+def training(X, y, clf, K = 5, _plot = False, oversmpl = False):
 
     p = np.random.RandomState(seed=847).permutation(len(y))
     Xsh = X[p]
@@ -115,49 +142,41 @@ def training(X, y, clf, K = 5, m = False, oversmpl = False):
         wrong[yp == yv] = 0
         errs.append(sum(wrong) / len(yv))
         
-        if m:
+        if _plot:
             # plot confusion matrix
-            # Get and reshape confusion matrix data
-            matrix = confusion_matrix(yv, yp)
-            matrix = matrix.astype('float') / matrix.sum(axis=1)[:, np.newaxis]
+            plotconfmatrix(yv, yp, clf)
             
-            # Build the plot
-            plt.figure(figsize=(16,7))
-            sns.set(font_scale=1.4)
-            sns.heatmap(matrix, annot=True, annot_kws={'size':10},
-                        cmap=plt.cm.Greens, linewidths=0.2)
-            
-            # Add labels to the plot
-            class_names = ['No Change', 'Mild Change', 'Severe Change', 'Lethal']
-            tick_marks = np.arange(len(class_names))
-            tick_marks2 = tick_marks + 0.5
-            plt.xticks(tick_marks, class_names, rotation=25)
-            plt.yticks(tick_marks2, class_names, rotation=0)
-            plt.xlabel('Predicted label')
-            plt.ylabel('True label')
-            plt.title('Confusion Matrix for ' + str(clf).replace('()',''))
-            plt.show()
-            
-
     avgerr = sum(errs) / len(errs)
     avgacc = sum(acc) / len(acc)
     
     return avgerr, avgacc
 
+def train_and_print(X, y, clf, featureset, _plot = False, oversmpl = True):
+    avgerr, avgacc = training(X, y, clf, _plot = _plot, oversmpl = oversmpl)
+    print(f'{str(clf).replace('()','')} classifier on {featureset} with depth {d}:')
+    print(f'average cross-validation error = {avgerr}, average cross-validation accuracy = {avgacc}', end='\n\n')
 
 
-# classifiers
-classifiers = [svm.SVC(), RandomForestClassifier(), MLPClassifier()]
-
-# # rolX predictions
+# rolX predictions
 Xr, yr, ycr = rolx_training_data()
 
-# for clf in classifiers:
-#     training(Xr, ycr, clf, m = True, oversmpl = True)
+# random forests:
+for d in range(1,25):
+    forest = RandomForestClassifier(max_depth=d, random_state=0)
+    train_and_print(Xr, ycr, forest, 'rolx roles', _plot = False, oversmpl = True)
 
-# # training(Xo, yco, svm.SVC(decision_function_shape='ovo'))
-# # training(Xo, yco, svm.SVC())
+# multi-layer perceptron:
+mlp = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
+train_and_print(Xr, ycr, mlp, 'rolx roles', _plot = True, oversmpl = True)
 
+
+# support vector machine:
+svm = svm.SVC() # svm.SVC(decision_function_shape='ovo')
+train_and_print(Xr, ycr, svm, 'rolx roles', _plot = True, oversmpl = True)
+
+# logistic regression:
+logreg = LogisticRegression(random_state=0)
+train_and_print(Xr, ycr, logreg, 'rolx roles', _plot = True, oversmpl = True)
 
 # models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
 
