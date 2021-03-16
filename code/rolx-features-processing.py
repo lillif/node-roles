@@ -8,36 +8,13 @@ import numpy as np
 
 
 def features(model):
-
     mfeatures = pd.read_csv(f'../data/rolx-features/{model}_features-df.csv')
     return mfeatures
     
 def commonfeatures(dfs):
-    
-    cols = {}
-
-    for m, d in dfs.items():
-        cols[m] = []
-        for c in d.columns:
-            cols[m].append(c)
-            
-    all_ = []
-    
-    for cc in cols.values():
-        for c in cc:
-            all_.append(c)
-            
-    all_ = list(set(all_))
-    
-    inall = []
-    
-    for a in all_:
-        if a in cols['BT-549'] and a in cols['HCT-116'] and a in cols['K-562']:
-            if a in cols['MCF7'] and a in cols['OVCAR-5']:
-                inall.append(a)
-        
-    for k, v in dfs.items():
-        dfs[k] = v[inall]
+    cols = [set(d.columns) for d in dfs.values()]
+    inall = set.intersection(*cols) # need * for list of sets in intersection
+    for k, v in dfs.items(): dfs[k] = v[inall]
     return dfs
 
 models = ['BT-549', 'HCT-116', 'K-562', 'MCF7', 'OVCAR-5']
