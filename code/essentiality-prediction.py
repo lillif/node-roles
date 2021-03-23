@@ -128,7 +128,7 @@ def roccurve(classifier, X_train, y_train, X_test, y_test, n_classes = 4):
     tpr = dict()
     roc_auc = dict()
     for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
+        fpr[i], tpr[i], _ = roc_curve(y_test[i], y_score[i])
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # Compute ROC curve and ROC area for each class
@@ -213,7 +213,7 @@ def training(X, y, clf, K = 5, _plot = False, oversmpl = False):
         
         if _plot:
             # plot ROC curve
-            roccurve(clf, Xt, yt, Xv, yv)
+            # roccurve(clf, Xt, yt, Xv, yv)
             # plot confmatrix
             plotconfmatrix(yv, yp, clf)
             

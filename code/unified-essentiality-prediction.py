@@ -3,29 +3,39 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pickle
 
-# importing models from sklearn
+# sklearn classification algorithms
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
 
-# sns for the confusion matrix plot
+
+# sklearn regression algorithms
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import svm
+
+# sklearn preprocessing functions
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import (StandardScaler)
+
+# analysing and visualising classifiier predictions
 import seaborn as sns
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from sklearn.metrics import precision_recall_curve, f1_score
-
-# importing sys for exiting when necessary
-import sys
+from sklearn.metrics import (accuracy_score,
+                             auc,
+                             confusion_matrix,
+                             f1_score,
+                             precision_recall_curve, 
+                             roc_auc_score,
+                             roc_curve)
+# from sklearn.metrics import classification_report
 
 import pandas as pd
 
-from sklearn import datasets
-from sklearn.metrics import roc_curve, auc
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import label_binarize
-from sklearn.multiclass import OneVsRestClassifier
-# from scipy import interp
-from sklearn.metrics import roc_auc_score
+from sklearn.utils import shuffle
+
+
+
 
 # list of names of all five cell lines
 models = ['BT-549', 'HCT-116', 'K-562', 'MCF7', 'OVCAR-5']
@@ -72,6 +82,30 @@ def binary_labels(e, t = 0.5):
     c[np.round(e, decimals=10) <= t] = 0
     return c
 
+def tertiary_labels(e):
+    """
+    Parameters
+    ----------
+    e : np.array (1-dimensional)
+        essentiality values.
+
+    Returns
+    -------
+    c : np.array (1-dimensional)
+        three essentiality classes.
+
+    """
+
+    c = np.zeros_like(e)
+    c[(e >= 0.1) & (e < 1)] = 1
+    c[e == 1] = 2
+    return c
+def quaternary_labels(e):
+    c = np.zeros_like(e)
+    c[(e >= 0.1) & (e < 0.5)] = 1
+    c[(e >= 0.5) & (e < 1)] = 2
+    c[e == 1] = 3
+    return c
 
 def refx_features():
     """
@@ -193,116 +227,87 @@ def plotconfmatrix(yv, yp, clf):
     plt.title(str(clf).split('(')[0] + ' Confusion Matrix')
     plt.show()
 
-
-
-def k_fold(X, y, clf, K = 5, _plot = False, oversmpl = False):
-
-    p = np.random.RandomState(seed=847).permutation(len(y))
-    Xsh = X[p]
-    ysh = y[p]
-
-    print(len(Xsh))
-    print(len(ysh))
+def plotconfmatrix4(yv, yp, clf):
+    # plot confusion matrix
+    # Get and reshape confusion matrix data
+    matrix = confusion_matrix(yv, yp)
+    matrix = matrix.astype('float') / matrix.sum(axis=1)[:, np.newaxis]
     
-    print(f'sum y is {sum(y)}')
-
-    splits = [int(i * len(y) / K) for i in range(K+1)]
-
-
-    errs = []
-    acc = []
-
-    for k in range(K):
-        
-        Xt = np.concatenate((Xsh[:splits[k]], Xsh[splits[k+1]:]))
-        yt = np.concatenate((ysh[:splits[k]], ysh[splits[k+1]:]))
-        
-        print((yt == 1).any())
-        print((yt == 0).any())
-
-        Xv = Xsh[splits[k]:splits[k+1]]
-        yv = ysh[splits[k]:splits[k+1]]
-        
-        if oversmpl:
-            Xt, yt = oversample(Xt, yt)
-            # Xv, yv = oversample(Xv, yv)
-
-        clf.fit(Xt, yt)
-
-        yp = clf.predict(Xv)
-        
-        acc.append(accuracy_score(yv, yp))
-        
-        wrong = np.ones_like(yp)
-        wrong[yp == yv] = 0
-        errs.append(sum(wrong) / len(yv))
-        
-        if _plot:
-
-
-            # plot ROC curve
-            ns_probs = [0 for _ in range(len(yv))]
-            lr_probs = clf.predict_proba(Xv)
-            lr_probs = lr_probs[:, 1]
-            ns_auc = roc_auc_score(yv, ns_probs)
-            lr_auc = roc_auc_score(yv, lr_probs)
-            # summarize scores
-            print('No Skill: ROC AUC=%.3f' % (ns_auc))
-            print('Logistic: ROC AUC=%.3f' % (lr_auc))
-            # calculate roc curves
-            ns_fpr, ns_tpr, _ = roc_curve(yv, ns_probs)
-            lr_fpr, lr_tpr, _ = roc_curve(yv, lr_probs)
-            # plot the roc curve for the model
-            mpl.style.use('default')
-            plt.figure()
-            plt.plot(ns_fpr, ns_tpr, linestyle='--', color='#00325F', label='No Skill')
-            plt.plot(lr_fpr, lr_tpr,  label= str(clf) + ' (area = %0.2f)' % lr_auc, color='#C10043')
-            # axis labels
-            plt.xlabel('False Positive Rate')
-            plt.ylabel('True Positive Rate')
-            # show the legend
-            plt.legend(loc="lower right")
-            plt.title('ROC Curve for ' + str(clf).split('(')[0])
-
-            # show the plot
-            plt.show()
-
-            # plot Precision-Recall Curve
-            
-            # predict class values
-            yhat = clf.predict(Xv)
-            lr_precision, lr_recall, _ = precision_recall_curve(yv, lr_probs)
-            lr_f1, lr_auc = f1_score(yv, yhat), auc(lr_recall, lr_precision)
-            # summarize scores
-            print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
-            # plot the precision-recall curves
-            no_skill = len(yv[yv==1]) / len(yv)
-            plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
-            plt.plot(lr_recall, lr_precision, marker='.', label= str(clf).replace('()',''), color='#C10043')
-            # axis labels
-            plt.xlabel('Recall')
-            plt.xlim([0, 1])
-            plt.ylabel('Precision')
-            plt.ylim([0, 1])
-            # show the legend
-            plt.legend()
-            # add a title
-            plt.title('Precision-Recall Curve for ' + str(clf).replace('()',''))
-            # show the plot
-            plt.show()
-
-            # plot confusion matrix
-            plotconfmatrix(yv, yp, clf)
-            
-            
-    avgerr = sum(errs) / len(errs)
-    avgacc = sum(acc) / len(acc)
+    # Build the plot
+    plt.figure(figsize=(16,7))
+    sns.set(font_scale=1.4)
+    sns.heatmap(matrix, annot=True, annot_kws={'size':10},
+                cmap=plt.cm.Blues, linewidths=0.2)
     
-    return avgerr, avgacc
+    # Add labels to the plot
+    class_names = ['No Change', 'Mild Change', 'Severe Change', 'Lethal']
+    tick_marks = np.arange(len(class_names))
+    tick_marks2 = tick_marks + 0.5
+    plt.xticks(tick_marks, class_names, rotation=25)
+    plt.yticks(tick_marks2, class_names, rotation=0)
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.title('Confusion Matrix for ' + str(clf).split('(')[0])
+    plt.show()
 
 
-def training(Xt, yt, Xv, yv, clf, _plot = False, oversmpl = False):
+    
+def plotroc(Xv, yv, clf, featureset):
+    # plot ROC curve
+    ns_probs = [0 for _ in range(len(yv))]
+    lr_probs = clf.predict_proba(Xv)
+    lr_probs = lr_probs[:, 1]
+    ns_auc = roc_auc_score(yv, ns_probs)
+    lr_auc = roc_auc_score(yv, lr_probs)
+    # summarize scores
+    print('No Skill: ROC AUC=%.3f' % (ns_auc))
+    print('Logistic: ROC AUC=%.3f' % (lr_auc))
+    # calculate roc curves
+    ns_fpr, ns_tpr, _ = roc_curve(yv, ns_probs)
+    lr_fpr, lr_tpr, _ = roc_curve(yv, lr_probs)
+    # plot the roc curve for the model
+    mpl.style.use('default')
+    plt.figure()
+    plt.plot(ns_fpr, ns_tpr, linestyle='--', color='#00325F', label='No Skill')
+    plt.plot(lr_fpr, lr_tpr,  label= str(clf).split('(')[0] + ' (area = %0.2f)' % lr_auc, color='#C10043')
+    # axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    # show the legend
+    plt.legend(loc="lower right")
+    plt.title(f"ROC Curve for {str(clf).split('(')[0]} on {featureset} features")
 
+    # show the plot
+    plt.show()
+
+def plotpr(Xv, yv, clf, featureset):
+    lr_probs = clf.predict_proba(Xv)
+    lr_probs = lr_probs[:, 1]
+    # predict class values
+    yhat = clf.predict(Xv)
+    lr_precision, lr_recall, _ = precision_recall_curve(yv, lr_probs)
+    lr_f1, lr_auc = f1_score(yv, yhat), auc(lr_recall, lr_precision)
+    # summarize scores
+    print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
+    # plot the precision-recall curves
+    no_skill = len(yv[yv==1]) / len(yv)
+    plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+    plt.plot(lr_recall, lr_precision, marker='.', label= str(clf).split('(')[0], color='#C10043')
+    # axis labels
+    plt.xlabel('Recall')
+    plt.xlim([0, 1])
+    plt.ylabel('Precision')
+    plt.ylim([0, 1])
+    # show the legend
+    plt.legend()
+    # add a title
+    plt.title(f"Precision-Recall Curve for {str(clf).split('(')[0]} on {featureset} features")
+    # show the plot
+    plt.show()
+
+
+
+def training(Xt, yt, Xv, yv, clf, featureset, _plot = False, oversmpl = False, four=False):
 
     if oversmpl:
         Xt, yt = oversample(Xt, yt)
@@ -318,104 +323,168 @@ def training(Xt, yt, Xv, yv, clf, _plot = False, oversmpl = False):
     wrong[yp == yv] = 0
     err = sum(wrong) / len(yv)
     
-    if _plot:
+    if _plot and not four:
         print(f'train (0, 1): ({len(yt[yt==0])}, {len(yt[yt==1])})')
         print(f'test (0, 1): ({len(yv[yv==0])}, {len(yv[yv==1])})')
         # plot ROC curve
-        ns_probs = [0 for _ in range(len(yv))]
-        lr_probs = clf.predict_proba(Xv)
-        lr_probs = lr_probs[:, 1]
-        ns_auc = roc_auc_score(yv, ns_probs)
-        lr_auc = roc_auc_score(yv, lr_probs)
-        # summarize scores
-        print('No Skill: ROC AUC=%.3f' % (ns_auc))
-        print('Logistic: ROC AUC=%.3f' % (lr_auc))
-        # calculate roc curves
-        ns_fpr, ns_tpr, _ = roc_curve(yv, ns_probs)
-        lr_fpr, lr_tpr, _ = roc_curve(yv, lr_probs)
-        # plot the roc curve for the model
-        mpl.style.use('default')
-        plt.figure()
-        plt.plot(ns_fpr, ns_tpr, linestyle='--', color='#00325F', label='No Skill')
-        plt.plot(lr_fpr, lr_tpr,  label= str(clf).split('(')[0] + ' (area = %0.2f)' % lr_auc, color='#C10043')
-        # axis labels
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        # show the legend
-        plt.legend(loc="lower right")
-        plt.title('ROC Curve for ' + str(clf).split('(')[0])
-
-        # show the plot
-        plt.show()
-
-        # plot Precision-Recall Curve
+        plotroc(Xv, yv, clf, featureset)
         
-        # predict class values
-        yhat = clf.predict(Xv)
-        lr_precision, lr_recall, _ = precision_recall_curve(yv, lr_probs)
-        lr_f1, lr_auc = f1_score(yv, yhat), auc(lr_recall, lr_precision)
-        # summarize scores
-        print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
-        # plot the precision-recall curves
-        no_skill = len(yv[yv==1]) / len(yv)
-        plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
-        plt.plot(lr_recall, lr_precision, marker='.', label= str(clf).split('(')[0], color='#C10043')
-        # axis labels
-        plt.xlabel('Recall')
-        plt.xlim([0, 1])
-        plt.ylabel('Precision')
-        plt.ylim([0, 1])
-        # show the legend
-        plt.legend()
-        # add a title
-        plt.title('Precision-Recall Curve for ' + str(clf).split('(')[0])
-        # show the plot
-        plt.show()
-
+        # plot Precision-Recall Curve
+        plotpr(Xv, yv, clf, featureset)
+        
         # plot confusion matrix
         plotconfmatrix(yv, yp, clf)
+        
+    elif _plot:
+        plotconfmatrix4(yv, yp, clf)
     
     return err, acc
 
-def train_and_print(X, y, clf, featureset, _plot = False, oversmpl = True):
-    avgerr, avgacc = k_fold(X, y, clf, _plot = _plot, oversmpl = oversmpl)
-    print(f'{str(clf).replace("()","")} classifier on {featureset}:')
-    print(f'average cross-validation error = {avgerr}, average cross-validation accuracy = {avgacc}', end='\n\n')
+def visualise_classes(y, e):
+    plt.figure()
+    nz = np.count_nonzero(y)
+    plt.bar([0,1], [len(y) - nz, nz], width=0.2)
+    plt.xticks([0,1], labels=['Non-Essential', 'Essential'])
+    plt.xlabel('Essentiality Class')
+    plt.ylabel('Number of Reactions')
+    plt.title('Number of Reactions per Class (binary)')
+    
+    plt.figure()
+    nc = len(e[e < 0.1])
+    mc = len(e[(e >= 0.1) & (e < 0.5)])
+    sc = len(e[(e >= 0.5) & (e < 1)])
+    le = len(e[e == 1])
+    plt.bar([0,1, 2, 3], [nc, mc, sc, le], width=0.2)
+    plt.xticks([0,1, 2, 3], labels=['No Change', 'Mild Change', 'Severe Change', 'Lethal'])
+    plt.xlabel('Essentiality Class')
+    plt.ylabel('Number of Reactions')
+    plt.title('Number of Reactions per Class (multiclass)')
 
+    
 
+def visualise_data(e, X, dataset='RefX'):
+    mpl.style.use('default')
+    yy = sorted(e)
+    xx = np.arange(len(yy))
+    plt.plot(xx,yy,'x-', color='#00325F')
+    # plt.plot(xx,yy,'x-', color='#C10043')
+    #C10043
+    plt.xlabel('Reaction')
+    plt.title('Reaction Essentialities')
+    plt.ylabel('Essentiality')
+    plt.show()
+    
+
+    # boxplot
+    data = [X[:,i] for i in range(X.shape[1])]
+    plt.boxplot(data)
+    plt.xlabel('Feature Dimension')
+    plt.ylabel('Values')
+    plt.title(f'{dataset} Feature Values by Dimension')
+    
+    
 # refX features
 X_refx = refx_features()
+
 
 # load essentialities
 e = essentialities()
 
-ts = [0, 0.5]
-
+# ts = [0, 0.5]
+ts = [0.5]
 
 # flow profile features
 X_flow = flow_profiles_training_data()
 
+classifiers = [svm.SVC(probability=True),
+                LogisticRegression(random_state=0),
+                MLPClassifier(random_state=0),
+                # OneVsRestClassifier(),
+                RandomForestClassifier()]
 
-for t in ts:
-    y = binary_labels(e, t).astype('int')
-    
-    # refX predictions
-    X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.5, random_state=842)
-    
-    # # flow profile predictions
-    # X_train, X_test, y_train, y_test = train_test_split(X_flow, y, test_size=0.5, random_state=842)
+t = 0.5
+# for t in ts:
+y = binary_labels(e, t).astype('int')
 
-    print(f'\nthreshold {t}')
-    # support vector machine:
-    svm_clf = svm.SVC(probability=True) # svm.SVC(decision_function_shape='ovo')
-    err, acc = training(X_train, y_train, X_test, y_test, svm_clf, _plot=True, oversmpl=True)
-    print(f'SVM: Error is {err}, Accuracy is {acc}')
+# # refX predictions
+# featureset = 'raw RefX'
+# X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
+
+# standardized refX predictions
+featureset = 'std RefX'
+X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
+refx_scaler = StandardScaler().fit(X_train)
+X_train = refx_scaler.transform(X_train)
+X_test = refx_scaler.transform(X_test)
+
+# # flow profile predictions
+# featureset = 'flow profiles'
+# X_train, X_test, y_train, y_test = train_test_split(X_flow, y, test_size=0.2, random_state=842, stratify=y)
+
+# for clf in classifiers:
+#     err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
+#     print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')
     
-    # logistic regression:
-    logreg = LogisticRegression(random_state=0)
-    # train_and_print(X_train, y_train, logreg, 'refx features', _plot = True, oversmpl = True)
-    err, acc = training(X_train, y_train, X_test, y_test, logreg, _plot=True, oversmpl=True)
-    print(f'LogReg: Error is {err}, Accuracy is {acc}')
-    # models = ['BT-549', 'HCT-116','K-562', 'MCF7', 'OVCAR-5']
+# y = tertiary_labels(e).astype('int')
+# X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
+# refx_scaler = StandardScaler().fit(X_train)
+# X_train = refx_scaler.transform(X_train)
+# X_test = refx_scaler.transform(X_test)
+
+# for clf in classifiers:
+#     err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False, four=True)
     
 
+
+
+rf = RandomForestRegressor(random_state = 42)
+
+Xs, es = shuffle(X_refx, e,  random_state=0)
+split = int(0.8*len(Xs))
+X_train = Xs[:split]
+X_test = Xs[split:]
+y_train = es[:split]
+y_test = es[split:]
+
+refx_scaler = StandardScaler().fit(X_train)
+X_train = refx_scaler.transform(X_train)
+X_test = refx_scaler.transform(X_test)
+
+
+rf.fit(X_train, y_train)
+y_pred = rf.predict(X_test)
+
+
+ind = np.argsort(y_test)
+sorted_y_test = y_test[ind]
+sorted_y_pred = y_pred[ind]
+
+xx = np.arange(len(y_test))
+mpl.style.use('default')
+plt.figure()
+plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
+plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
+plt.legend()
+plt.xlabel('Reactions (sorted by ascending true label)')
+plt.ylabel('Essentiality')
+plt.title('Random Forest')
+
+svc = svm.SVC(kernel='poly', degree=3)
+svc.fit(X_train, y_train)
+
+y_pred = rf.predict(X_test)
+
+
+ind = np.argsort(y_test)
+sorted_y_test = y_test[ind]
+sorted_y_pred = y_pred[ind]
+
+xx = np.arange(len(y_test))
+mpl.style.use('default')
+plt.figure()
+plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
+plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
+plt.legend()
+plt.xlabel('Reactions (sorted by ascending true label)')
+plt.ylabel('Essentiality')
+plt.title('SVM')

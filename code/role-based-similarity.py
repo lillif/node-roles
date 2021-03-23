@@ -16,7 +16,8 @@ def directed_diameter(e, GG):
     # largest strongly connected component:
     lscc = max(nx.strongly_connected_components(GG), key=len)
     Gr = nx.DiGraph()
-    Gr.add_edges_from([s,t] for s,t in zip(e['Source'], e['Target']) if (s in lscc and t in lscc))
+    Gr.add_edges_from([s,t] for s,t in zip(e['Source'], e['Target']) 
+                      if (s in lscc and t in lscc))
     k = nx.algorithms.distance_measures.diameter(Gr)
     return k
 
@@ -79,6 +80,19 @@ def draw_graph(Y):
                            cmap=cmap, node_color=list(partition.values()))
     nx.draw_networkx_edges(GY, pos, alpha=0.5, width=0.02)
     plt.show()
+
+def flow_profiles(edges, alpha=0.5):
+    G = nx.DiGraph()
+    
+    for row in e.iterrows():
+        _, s, t, w = row[1]
+        G.add_edge(s,t, weight=w)
+    
+    A = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
+    k = directed_diameter(e, G) # diameter of largest strongly connected component of MFG
+
+    X, Y = sim_rb(A, k, alpha)
+    return X, Y
 
 
 models = ['BT-549'] #, 'HCT-116','K-562', 'MCF7', 'OVCAR-5']

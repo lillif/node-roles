@@ -33,7 +33,8 @@ def directed_diameter(e, GG):
     # largest strongly connected component:
     lscc = max(nx.strongly_connected_components(GG), key=len)
     Gr = nx.DiGraph()
-    Gr.add_edges_from([s,t] for s,t in zip(e['Source'], e['Target']) if (s in lscc and t in lscc))
+    Gr.add_edges_from([s,t] for s,t in zip(e['Source'], e['Target']) 
+                      if (s in lscc and t in lscc))
     k = nx.algorithms.distance_measures.diameter(Gr)
     return k
 

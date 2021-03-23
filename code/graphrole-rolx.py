@@ -79,7 +79,7 @@ def runRolX(model):
     n = pd.read_csv(f'../data/mfgs/{model}_nodes.csv')
     nr_df = list(node_roles.values())
     n['Role'] = nr_df
-    n.to_csv(f'../data/mfgs/{model}_rolxnodes.csv', index=False)
+    # n.to_csv(f'../data/mfgs/{model}_rolxnodes.csv', index=False)
 
 
     # plotting roles & essentiality
@@ -121,7 +121,7 @@ def runRolX(model):
     plt.title(f'Reactions by RolX-role and FBA-essentiality ({model})')
     plt.xticks(np.arange(r), role_ess.keys())
     plt.legend((p1[0], p2[0], p3[0], p4[0]), ('no damage', 'mild change', 'severe change', 'lethal'))
-    plt.savefig(f'../figures/{model}_rolx.png')
+    # plt.savefig(f'../figures/{model}_rolx.png')
 
 
 
