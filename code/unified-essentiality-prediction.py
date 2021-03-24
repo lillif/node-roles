@@ -17,7 +17,7 @@ from sklearn import svm
 
 # sklearn preprocessing functions
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import (StandardScaler)
+from sklearn.preprocessing import (StandardScaler, MinMaxScaler)
 
 # analysing and visualising classifiier predictions
 import seaborn as sns
@@ -364,6 +364,7 @@ def visualise_classes(y, e):
 
 def visualise_data(e, X, dataset='RefX'):
     mpl.style.use('default')
+    plt.figure()
     yy = sorted(e)
     xx = np.arange(len(yy))
     plt.plot(xx,yy,'x-', color='#00325F')
@@ -374,13 +375,23 @@ def visualise_data(e, X, dataset='RefX'):
     plt.ylabel('Essentiality')
     plt.show()
     
-
     # boxplot
+    plt.figure()
     data = [X[:,i] for i in range(X.shape[1])]
     plt.boxplot(data)
     plt.xlabel('Feature Dimension')
     plt.ylabel('Values')
     plt.title(f'{dataset} Feature Values by Dimension')
+    plt.show()
+    
+    # visualise correlation matrix of dimensions
+    plt.figure()
+    corr = np.corrcoef(X.T)
+    sns.heatmap(corr)
+    plt.title(f'{dataset} Correlation of Feature Dimensions')
+    plt.xlabel('Dimension')
+    plt.ylabel('Dimension')
+    plt.show()
     
     
 # refX features
@@ -402,7 +413,7 @@ classifiers = [svm.SVC(probability=True),
                 # OneVsRestClassifier(),
                 RandomForestClassifier()]
 
-t = 0.5
+t = 0.1
 # for t in ts:
 y = binary_labels(e, t).astype('int')
 
@@ -410,22 +421,28 @@ y = binary_labels(e, t).astype('int')
 # featureset = 'raw RefX'
 # X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
 
-# standardized refX predictions
-featureset = 'std RefX'
-X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
-refx_scaler = StandardScaler().fit(X_train)
-X_train = refx_scaler.transform(X_train)
-X_test = refx_scaler.transform(X_test)
+# # standardized refX predictions
+# featureset = 'std RefX'
+# X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
+# refx_scaler = StandardScaler().fit(X_train)
+# X_train = refx_scaler.transform(X_train)
+# X_test = refx_scaler.transform(X_test)
 
-# # flow profile predictions
-# featureset = 'flow profiles'
-# X_train, X_test, y_train, y_test = train_test_split(X_flow, y, test_size=0.2, random_state=842, stratify=y)
+# flow profile predictions
+featureset = 'Normalised Flow Profile'
+X_train, X_test, y_train, y_test = train_test_split(X_flow, y, test_size=0.2, random_state=842, stratify=y)
+flow_scaler = StandardScaler().fit(X_train)
+X_train = flow_scaler.transform(X_train)
+X_test = flow_scaler.transform(X_test)
+min_max_scaler = MinMaxScaler()
+X_train = min_max_scaler.fit_transform(X_train)
+X_test = min_max_scaler.transform(X_test)
 
-# for clf in classifiers:
-#     err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
-#     print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')
+for clf in classifiers:
+    err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
+    print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')
     
-# y = tertiary_labels(e).astype('int')
+# y = quaternary_labels(e).astype('int')
 # X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
 # refx_scaler = StandardScaler().fit(X_train)
 # X_train = refx_scaler.transform(X_train)
@@ -437,54 +454,54 @@ X_test = refx_scaler.transform(X_test)
 
 
 
-rf = RandomForestRegressor(random_state = 42)
+# rf = RandomForestRegressor(random_state = 42)
 
-Xs, es = shuffle(X_refx, e,  random_state=0)
-split = int(0.8*len(Xs))
-X_train = Xs[:split]
-X_test = Xs[split:]
-y_train = es[:split]
-y_test = es[split:]
+# Xs, es = shuffle(X_refx, e,  random_state=0)
+# split = int(0.8*len(Xs))
+# X_train = Xs[:split]
+# X_test = Xs[split:]
+# y_train = es[:split]
+# y_test = es[split:]
 
-refx_scaler = StandardScaler().fit(X_train)
-X_train = refx_scaler.transform(X_train)
-X_test = refx_scaler.transform(X_test)
-
-
-rf.fit(X_train, y_train)
-y_pred = rf.predict(X_test)
+# refx_scaler = StandardScaler().fit(X_train)
+# X_train = refx_scaler.transform(X_train)
+# X_test = refx_scaler.transform(X_test)
 
 
-ind = np.argsort(y_test)
-sorted_y_test = y_test[ind]
-sorted_y_pred = y_pred[ind]
-
-xx = np.arange(len(y_test))
-mpl.style.use('default')
-plt.figure()
-plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
-plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
-plt.legend()
-plt.xlabel('Reactions (sorted by ascending true label)')
-plt.ylabel('Essentiality')
-plt.title('Random Forest')
-
-svc = svm.SVC(kernel='poly', degree=3)
-svc.fit(X_train, y_train)
-
-y_pred = rf.predict(X_test)
+# rf.fit(X_train, y_train)
+# y_pred = rf.predict(X_test)
 
 
-ind = np.argsort(y_test)
-sorted_y_test = y_test[ind]
-sorted_y_pred = y_pred[ind]
+# ind = np.argsort(y_test)
+# sorted_y_test = y_test[ind]
+# sorted_y_pred = y_pred[ind]
 
-xx = np.arange(len(y_test))
-mpl.style.use('default')
-plt.figure()
-plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
-plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
-plt.legend()
-plt.xlabel('Reactions (sorted by ascending true label)')
-plt.ylabel('Essentiality')
-plt.title('SVM')
+# xx = np.arange(len(y_test))
+# mpl.style.use('default')
+# plt.figure()
+# plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
+# plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
+# plt.legend()
+# plt.xlabel('Reactions (sorted by ascending true label)')
+# plt.ylabel('Essentiality')
+# plt.title('Random Forest')
+
+# svc = svm.SVC(kernel='poly', degree=3)
+# svc.fit(X_train, y_train)
+
+# y_pred = rf.predict(X_test)
+
+
+# ind = np.argsort(y_test)
+# sorted_y_test = y_test[ind]
+# sorted_y_pred = y_pred[ind]
+
+# xx = np.arange(len(y_test))
+# mpl.style.use('default')
+# plt.figure()
+# plt.plot(xx, sorted_y_pred, label='Predicted Values', color='#00325F')
+# plt.plot(xx, sorted_y_test, label='True Values', color='#C10043')
+# plt.legend()
+# plt.xlabel('Reactions (sorted by ascending true label)')
+# plt.ylabel('Essentiality')
+# plt.title('SVM')

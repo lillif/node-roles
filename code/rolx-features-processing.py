@@ -15,14 +15,14 @@ def commonfeatures(dfs):
     cols = [set(d.columns) for d in dfs.values()]
     inall = set.intersection(*cols) # need * for list of sets in intersection
     for k, v in dfs.items(): dfs[k] = v[inall]
-    return dfs
+    return dfs, cols, inall
 
 models = ['BT-549', 'HCT-116', 'K-562', 'MCF7', 'OVCAR-5']
 dfs = {}
 for model in models:
     dfs[model] = features(model)
 
-feat = commonfeatures(dfs)
+feat, cols, inall = commonfeatures(dfs)
 
 
 for model in models:
