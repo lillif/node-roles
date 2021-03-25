@@ -391,79 +391,39 @@ def visualise_data(e, X, dataset='RefX'):
     plt.ylabel('Dimension')
     plt.show()
     
-def k_fold_roc(X, y, cv, classifier, featureset, ax):
-    tprs = []
-    aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
+def k_fold_confmat(yv, yp):
+    # plot confusion matrix
+    # Get and reshape confusion matrix data
+    matrix = confusion_matrix(yv, yp)
+    matrix = matrix.astype('float') / matrix.sum(axis=1)[:, np.newaxis]
+    return matrix
     
-
+def k_fold_plot_confmat(matrices, ax):
+    matrix = np.mean(matrices, axis=0)
     
-    for i, (train, test) in enumerate(cv.split(X, y)):
-        classifier.fit(X[train], y[train])
-        viz = plot_roc_curve(classifier, X[test], y[test],
-                             name='ROC fold {}'.format(i),
-                             alpha=0.3, lw=1, ax=ax)
-        interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)
-        interp_tpr[0] = 0.0
-        tprs.append(interp_tpr)
-        aucs.append(viz.roc_auc)
+    # Build the plot
+    sns.set(font_scale=1.4)
+    sns.heatmap(matrix, annot=True, annot_kws={'size':10},
+                cmap=plt.cm.Blues, linewidths=0.2, ax = ax)
     
-    ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
-            label='Chance', alpha=.8)
-    
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-    mean_auc = auc(mean_fpr, mean_tpr)
-    std_auc = np.std(aucs)
-    ax.plot(mean_fpr, mean_tpr, color='b',
-            label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
-            lw=2, alpha=.8)
-    
-    std_tpr = np.std(tprs, axis=0)
-    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-    ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
-                    label=r'$\pm$ 1 std. dev.')
-    
-    ax.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05],
-           title=f'ROC {featureset} {str(clf).split("(")[0]}')
-    ax.legend(loc="lower right", fontsize='small')
+    # Add labels to the plot
+    class_names = ['Non-Essential', 'Essential']
+    tick_marks = np.arange(len(class_names))
+    tick_marks2 = tick_marks + 0.5
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(class_names)
+    ax.set_yticks(tick_marks2)
+    ax.set_yticklabels(class_names)#, rotation=0)
+    ax.set_xlabel('Predicted label')
+    ax.set_ylabel('True label')
+    ax.set(title='Confusion Matrix')
 
 
 
-def k_fold_pr(X, y, cv, clf, featureset, ax):
-    y_real = []
-    y_proba = []
 
-    for i, (train_index, test_index) in enumerate(cv.split(X, y)):
-        Xtrain, Xtest = X[train_index], X[test_index]
-        ytrain, ytest = y[train_index], y[test_index]
-        clf.fit(Xtrain, ytrain)
-        pred_proba = clf.predict_proba(Xtest)
-        precision, recall, _ = precision_recall_curve(ytest, pred_proba[:,1])
-        lab = 'Fold %d AUC=%.4f' % (i+1, auc(recall, precision))
-        ax.plot(recall, precision, label=lab, lw=0.5)
-        y_real.append(ytest)
-        y_proba.append(pred_proba[:,1])
-        
-    no_skill = len(y[y==1]) / len(y)
-    ax.plot([0, 1], [no_skill, no_skill], linestyle='--', lw=2, color='r', label='No Skill')
-    
-    y_real = np.concatenate(y_real)
-    y_proba = np.concatenate(y_proba)
-    precision, recall, _ = precision_recall_curve(y_real, y_proba)
-    lab = 'Overall AUC=%.4f' % (auc(recall, precision))
-    ax.plot(recall, precision, label=lab, lw=2, color='b')
-    ax.set_xlabel('Recall')
-    ax.set_ylabel('Precision')
-    ax.legend(loc='lower left', fontsize='small')
-    ax.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05],
-           title=f'Precision Recall {featureset} {str(clf).split("(")[0]}')
-
-
-def k_fold_roc1(X, y, classifier, ax, i, mean_fpr):
+def k_fold_roc(X, y, classifier, ax, i, mean_fpr):
     viz = plot_roc_curve(classifier, X, y,
-                         name='ROC fold {}'.format(i),
+                         name=f'Fold {i}',
                          alpha=0.3, lw=1, ax=ax)
     interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)
     interp_tpr[0] = 0.0
@@ -471,7 +431,7 @@ def k_fold_roc1(X, y, classifier, ax, i, mean_fpr):
     return interp_tpr, viz.roc_auc
 
    
-def k_fold_pr1(X, y, clf, ax, i):
+def k_fold_pr(X, y, clf, ax, i):
     pred_proba = clf.predict_proba(X)
     precision, recall, _ = precision_recall_curve(y, pred_proba[:,1])
     lab = 'Fold %d AUC=%.4f' % (i+1, auc(recall, precision))
@@ -479,7 +439,7 @@ def k_fold_pr1(X, y, clf, ax, i):
     return y, pred_proba[:,1]
 
         
-def k_fold_training(X, y, cv, clf, featureset):
+def k_fold_training(X, y, cv, clf, featureset, cstr):
     mpl.style.use('default')
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     
@@ -492,41 +452,52 @@ def k_fold_training(X, y, cv, clf, featureset):
     y_real = []
     y_proba = []
     
+    # CONFMAT
+    matrices = []
+    
     for i, (train, test) in enumerate(cv.split(X, y)):
         clf.fit(X[train], y[train])
-        t, a = k_fold_roc1(X[test], y[test], clf, axes[0], i, mean_fpr)
-        tprs.append(t)
-        aucs.append(a)
+        # t, a = k_fold_roc(X[test], y[test], clf, axes[0], i, mean_fpr)
+        # tprs.append(t)
+        # aucs.append(a)
         
-        yr, yp = k_fold_pr1(X[test], y[test], clf, axes[1], i)
+        yr, yp = k_fold_pr(X[test], y[test], clf, axes[1], i)
         y_real.append(yr)
         y_proba.append(yp)
         
-    # FINAL ROC    
-    ax = axes[0]
-    ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
-            label='Chance', alpha=.8)
+        y_pred = clf.predict(X[test])
+        matrices.append(k_fold_confmat(y[test], y_pred))
+        
+    # CONFUSION MATRIX
+    # ax = axes[0]
+    k_fold_plot_confmat(matrices, axes[0])
+        
+    # # FINAL ROC    
+    # ax = axes[0]
+    # ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
+    #         label='Chance', alpha=.8)
     
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-    mean_auc = auc(mean_fpr, mean_tpr)
-    std_auc = np.std(aucs)
-    ax.plot(mean_fpr, mean_tpr, color='b',
-            label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
-            lw=2, alpha=.8)
+    # mean_tpr = np.mean(tprs, axis=0)
+    # mean_tpr[-1] = 1.0
+    # mean_auc = auc(mean_fpr, mean_tpr)
+    # std_auc = np.std(aucs)
+    # ax.plot(mean_fpr, mean_tpr, color='b',
+    #         label=r'Mean AUC = %0.2f $\pm$ %0.2f' % (mean_auc, std_auc),
+    #         lw=2, alpha=.8)
     
-    std_tpr = np.std(tprs, axis=0)
-    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-    ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
-                    label=r'$\pm$ 1 std. dev.')
+    # std_tpr = np.std(tprs, axis=0)
+    # tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+    # tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+    # ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
+    #                 label=r'$\pm$ 1 std. dev.')
     
-    ax.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05],
-            title=f'ROC {featureset} {str(clf).split("(")[0]}')
-    ax.legend(loc="lower right", fontsize='small')
+    # ax.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05],
+    #         title='ROC')
+    # ax.legend(loc="lower right", fontsize='small')
 
-    # FINAL PR
+    # # FINAL PR
     ax = axes[1]
+    mpl.style.use('default')
     no_skill = len(y[y==1]) / len(y)
     ax.plot([0, 1], [no_skill, no_skill], linestyle='--', lw=2, color='r', label='No Skill')
     
@@ -539,11 +510,11 @@ def k_fold_training(X, y, cv, clf, featureset):
     ax.set_ylabel('Precision')
     ax.legend(loc='lower left', fontsize='small')
     ax.set(xlim=[-0.05, 1.05], ylim=[-0.05, 1.05],
-           title=f'Precision Recall {featureset} {str(clf).split("(")[0]}')
-
+           title='Precision Recall')
+    plt.suptitle(f'{cstr} on {featureset}')
     fig.tight_layout()
     plt.show()
-        
+    
         
 # essentiality labels
 e = essentialities()
@@ -576,10 +547,16 @@ classifiers = [svm.SVC(probability=True),
                 MLPClassifier(random_state=0),
                 RandomForestClassifier()]
 
+cstrings = ['Support Vector Machine',
+            'Logistic Regression Classifier',
+            'Multi-Layer Perceptron',
+            'Random Forest Classifier']
+
 cv = StratifiedKFold(n_splits=5)
-for clf in [classifiers[3]]:
+# for clf, cstr in zip([classifiers[0]], [cstrings[0]]):
+for clf, cstr in zip([classifiers[3]], [cstrings[3]]):
     # err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
-    k_fold_training(X_train, y_train, cv, clf, featureset)
+    k_fold_training(X_train, y_train, cv, clf, featureset, cstr)
     # print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')
     
 # y = quaternary_labels(e).astype('int')
