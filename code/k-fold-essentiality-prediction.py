@@ -151,80 +151,6 @@ def flow_profiles_training_data():
     return X
 
 
-def oversample(X, y):
-    """
-    Function which copies samples from the smaller class to combat class imbalance.
-
-    Parameters
-    ----------
-    X : np.array [N, D]
-        Input feature matrix.
-    y : np.array [N, ]
-        Input class labels.
-
-    Returns
-    -------
-    X : np.array [N, D']
-        Input feature matrix with smaller class oversampled.
-    y : TYPE
-        DESCRIPTION.
-
-    """
-    X0 = X[y==0]
-    X1 = X[y==1]
-    
-    diff = abs(len(X0) - len(X1))
-    p = np.random.RandomState(seed=827).permutation(min(len(X0), len(X1)))
-    
-    if len(X0) > len(X1):
-        print(f'if: x0: {len(X0)}, x1: {len(X1)}')
-        X1 = np.repeat(X[y==1], int(len(X0) / len(X1)), axis=0)
-        if len(X0) > len(X1):
-            print(f'x0: {len(X0)}, x1: {len(X1)}')
-            diff = len(X0) - len(X1)
-            X1 = np.vstack((X1, X1[p[:diff]]))
-        
-    else:
-        print(f'else: x0: {len(X0)}, x1: {len(X1)}')
-        X0 = np.repeat(X[y==0], int(len(X1) / len(X0)), axis=0)
-        if len(X1) > len(X0):
-            print(f'x0: {len(X0)}, x1: {len(X1)}')
-            diff = len(X1) - len(X0)
-            X0 = np.vstack((X0, X0[p[:diff]]))
-        
-    
-    X = np.vstack((X0, X1))
-
-    y0 = np.repeat(0,len(X0))
-    y1 = np.repeat(1,len(X1))
-
-    y = np.hstack((y0,y1))
-    return X, y
-
-
-def plotconfmatrix(yv, yp, clf):
-    # plot confusion matrix
-    # Get and reshape confusion matrix data
-    matrix = confusion_matrix(yv, yp)
-    matrix = matrix.astype('float') / matrix.sum(axis=1)[:, np.newaxis]
-    
-    # Build the plot
-    plt.figure()
-    sns.set(font_scale=1.4)
-    sns.heatmap(matrix, annot=True, annot_kws={'size':10},
-                cmap=plt.cm.Blues, linewidths=0.2)
-    
-    # Add labels to the plot
-    class_names = ['Non-Essential', 'Essential']
-    tick_marks = np.arange(len(class_names))
-    tick_marks2 = tick_marks + 0.5
-    plt.xticks(tick_marks, class_names, rotation=0)
-    plt.yticks(tick_marks2, class_names, rotation=0)
-    plt.xlabel('Predicted label')
-    plt.ylabel('True label')
-    plt.title(str(clf).split('(')[0] + ' Confusion Matrix')
-    plt.show()
-
 def plotconfmatrix4(yv, yp, clf):
     # plot confusion matrix
     # Get and reshape confusion matrix data
@@ -247,96 +173,6 @@ def plotconfmatrix4(yv, yp, clf):
     plt.ylabel('True label')
     plt.title('Confusion Matrix for ' + str(clf).split('(')[0])
     plt.show()
-
-
-    
-def plotroc(Xv, yv, clf, featureset):
-    # plot ROC curve
-    ns_probs = [0 for _ in range(len(yv))]
-    lr_probs = clf.predict_proba(Xv)
-    lr_probs = lr_probs[:, 1]
-    ns_auc = roc_auc_score(yv, ns_probs)
-    lr_auc = roc_auc_score(yv, lr_probs)
-    # summarize scores
-    print('No Skill: ROC AUC=%.3f' % (ns_auc))
-    print('Logistic: ROC AUC=%.3f' % (lr_auc))
-    # calculate roc curves
-    ns_fpr, ns_tpr, _ = roc_curve(yv, ns_probs)
-    lr_fpr, lr_tpr, _ = roc_curve(yv, lr_probs)
-    # plot the roc curve for the model
-    mpl.style.use('default')
-    plt.figure()
-    plt.plot(ns_fpr, ns_tpr, linestyle='--', color='#00325F', label='No Skill')
-    plt.plot(lr_fpr, lr_tpr,  label= str(clf).split('(')[0] + ' (area = %0.2f)' % lr_auc, color='#C10043')
-    # axis labels
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    # show the legend
-    plt.legend(loc="lower right")
-    plt.title(f"ROC Curve for {str(clf).split('(')[0]} on {featureset} features")
-
-    # show the plot
-    plt.show()
-
-def plotpr(Xv, yv, clf, featureset):
-    lr_probs = clf.predict_proba(Xv)
-    lr_probs = lr_probs[:, 1]
-    # predict class values
-    yhat = clf.predict(Xv)
-    lr_precision, lr_recall, _ = precision_recall_curve(yv, lr_probs)
-    lr_f1, lr_auc = f1_score(yv, yhat), auc(lr_recall, lr_precision)
-    # summarize scores
-    print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
-    # plot the precision-recall curves
-    no_skill = len(yv[yv==1]) / len(yv)
-    plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
-    plt.plot(lr_recall, lr_precision, marker='.', label= str(clf).split('(')[0], color='#C10043')
-    # axis labels
-    plt.xlabel('Recall')
-    plt.xlim([0, 1])
-    plt.ylabel('Precision')
-    plt.ylim([0, 1])
-    # show the legend
-    plt.legend()
-    # add a title
-    plt.title(f"Precision-Recall Curve for {str(clf).split('(')[0]} on {featureset} features")
-    # show the plot
-    plt.show()
-
-
-
-def training(Xt, yt, Xv, yv, clf, featureset, _plot = False, oversmpl = False, four=False):
-
-    if oversmpl:
-        Xt, yt = oversample(Xt, yt)
-        Xv, yv = oversample(Xv, yv)
-
-    clf.fit(Xt, yt)
-
-    yp = clf.predict(Xv)
-    
-    acc = accuracy_score(yv, yp)
-    
-    wrong = np.ones_like(yp)
-    wrong[yp == yv] = 0
-    err = sum(wrong) / len(yv)
-    
-    if _plot and not four:
-        print(f'train (0, 1): ({len(yt[yt==0])}, {len(yt[yt==1])})')
-        print(f'test (0, 1): ({len(yv[yv==0])}, {len(yv[yv==1])})')
-        # plot ROC curve
-        plotroc(Xv, yv, clf, featureset)
-        
-        # plot Precision-Recall Curve
-        plotpr(Xv, yv, clf, featureset)
-        
-        # plot confusion matrix
-        plotconfmatrix(yv, yp, clf)
-        
-    elif _plot:
-        plotconfmatrix4(yv, yp, clf)
-    
-    return err, acc
 
 def visualise_classes(y, e):
     plt.figure()
@@ -455,6 +291,9 @@ def k_fold_training(X, y, cv, clf, featureset, cstr):
     # CONFMAT
     matrices = []
     
+    # accuracy
+    acc = []
+    
     for i, (train, test) in enumerate(cv.split(X, y)):
         clf.fit(X[train], y[train])
         # t, a = k_fold_roc(X[test], y[test], clf, axes[0], i, mean_fpr)
@@ -467,12 +306,13 @@ def k_fold_training(X, y, cv, clf, featureset, cstr):
         
         y_pred = clf.predict(X[test])
         matrices.append(k_fold_confmat(y[test], y_pred))
+        acc.append(accuracy_score(y[test], clf.predict(X[test])))
         
     # CONFUSION MATRIX
     # ax = axes[0]
     k_fold_plot_confmat(matrices, axes[0])
         
-    # # FINAL ROC    
+    # # FINAL ROC
     # ax = axes[0]
     # ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
     #         label='Chance', alpha=.8)
@@ -514,14 +354,14 @@ def k_fold_training(X, y, cv, clf, featureset, cstr):
     plt.suptitle(f'{cstr} on {featureset}')
     fig.tight_layout()
     plt.show()
-    
+    return acc
         
 # essentiality labels
 e = essentialities()
 t = 0.1
 y = binary_labels(e, t).astype('int')
 
-# reaction features (uncomment the one to use)
+# # reaction features (uncomment the one to use)
 featureset = 'ReFeX Features'
 X = refx_features()
 
@@ -531,10 +371,10 @@ X = refx_features()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=842, stratify=y)
 
 # optional: standardise / normalise features
-# featureset += ' (normalised)'
-# normalize = StandardScaler().fit(X_train)
-# X_train = normalize.transform(X_train)
-# X_test = normalize.transform(X_test)
+featureset += ' (normalised)'
+normalize = StandardScaler().fit(X_train)
+X_train = normalize.transform(X_train)
+X_test = normalize.transform(X_test)
 
 # featureset += ' (standardised)'
 # standardize = MinMaxScaler()
@@ -552,21 +392,25 @@ cstrings = ['Support Vector Machine',
             'Multi-Layer Perceptron',
             'Random Forest Classifier']
 
-cv = StratifiedKFold(n_splits=5)
+acc = {}
+
+cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=62)
 for clf, cstr in zip(classifiers, cstrings):
-# for clf, cstr in zip([classifiers[3]], [cstrings[3]]):
-    # err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
-    k_fold_training(X_train, y_train, cv, clf, featureset, cstr)
-    # print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')
+    acc[cstr] = k_fold_training(X_train, y_train, cv, clf, featureset, cstr)
+
     
-# y = quaternary_labels(e).astype('int')
-# X_train, X_test, y_train, y_test = train_test_split(X_refx, y, test_size=0.2, random_state=842, stratify=y)
-# refx_scaler = StandardScaler().fit(X_train)
-# X_train = refx_scaler.transform(X_train)
-# X_test = refx_scaler.transform(X_test)
 
-# for clf in classifiers:
-#     err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False, four=True)
+    
+mean_acc = [np.mean(acc[k]) for k in acc.keys()]
+acc_stdev = [np.std(acc[k]) for k in acc.keys()]
+plt.figure()
+for i in range(len(mean_acc)):
+    plt.errorbar(i, mean_acc[i], ls='', yerr=acc_stdev[i], marker='o',
+                 label = cstrings[i])
+plt.ylim([0.6,0.9])
+plt.xticks(np.arange(4), labels=cstrings, rotation=10)
+plt.ylabel('Accuracy')
+plt.xlabel('Classifier')
+plt.title(f'Cross-Validation Accuracy per Classifier on {featureset}')
 
-
-
+print(f'Average accuracies on {featureset}\n{[a + " " + str(np.round(b, decimals=3)) for a,b in zip(cstrings, mean_acc)]}')
