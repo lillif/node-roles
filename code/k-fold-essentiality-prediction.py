@@ -522,11 +522,11 @@ t = 0.1
 y = binary_labels(e, t).astype('int')
 
 # reaction features (uncomment the one to use)
-# featureset = 'ReFeX Features'
-# X = refx_features()
+featureset = 'ReFeX Features'
+X = refx_features()
 
-featureset = 'Flow Profiles'
-X = flow_profiles_training_data()
+# featureset = 'Flow Profiles'
+# X = flow_profiles_training_data()
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=842, stratify=y)
 
@@ -553,8 +553,8 @@ cstrings = ['Support Vector Machine',
             'Random Forest Classifier']
 
 cv = StratifiedKFold(n_splits=5)
-# for clf, cstr in zip([classifiers[0]], [cstrings[0]]):
-for clf, cstr in zip([classifiers[3]], [cstrings[3]]):
+for clf, cstr in zip(classifiers, cstrings):
+# for clf, cstr in zip([classifiers[3]], [cstrings[3]]):
     # err, acc = training(X_train, y_train, X_test, y_test, clf, featureset, _plot=True, oversmpl=False)
     k_fold_training(X_train, y_train, cv, clf, featureset, cstr)
     # print(f'{str(clf).split("(")[0]}: Error is {err}, Accuracy is {acc}')

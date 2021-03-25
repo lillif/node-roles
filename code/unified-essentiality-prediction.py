@@ -393,7 +393,7 @@ def visualise_data(e, X, dataset='RefX'):
     plt.ylabel('Dimension')
     plt.show()
     
-    
+
 # refX features
 X_refx = refx_features()
 
@@ -410,11 +410,10 @@ X_flow = flow_profiles_training_data()
 classifiers = [svm.SVC(probability=True),
                 LogisticRegression(random_state=0),
                 MLPClassifier(random_state=0),
-                # OneVsRestClassifier(),
                 RandomForestClassifier()]
 
 t = 0.1
-# for t in ts:
+
 y = binary_labels(e, t).astype('int')
 
 # # refX predictions
